@@ -1,0 +1,51 @@
+name: Build Windows Zip
+
+on:
+  workflow_dispatch:
+
+  permissions:
+    contents: write
+
+    jobs:
+      build:
+          runs-on: windows-latest
+              timeout-minutes: 45
+                  steps:
+                        - name: Checkout Code
+                                uses: actions/checkout@v4
+
+                                      - name: Setup Python 3.11
+                                              uses: actions/setup-python@v5
+                                                      with:
+                                                                python-version: '3.11'
+
+                                                                      - name: Install Dependencies
+                                                                              shell: cmd
+                                                                                      run: |
+                                                                                                python -m venv venv
+                                                                                                          call venv\Scripts\activate
+                                                                                                                    pip install --upgrade pip wheel setuptools
+                                                                                                                              pip install pyinstaller==6.8.0
+                                                                                                                                        pip install pypdf==4.3.1 python-docx==1.1.0 pillow==10.4.0
+                                                                                                                                                  pip install langchain-text-splitters==0.3.4 pydantic==2.8.2 pydantic-settings==2.4.0 pyyaml==6.0.1
+                                                                                                                                                            pip install gradio==4.44.1 requests==2.32.3 tqdm==4.66.5
+                                                                                                                                                                      pip install huggingface-hub==0.24.7 rapidocr-onnxruntime==1.3.5
+                                                                                                                                                                                set CMAKE_ARGS=-DLLAMA_BLAS=ON -DLLAMA_BLAS_VENDOR=OpenBLAS
+                                                                                                                                                                                          pip install llama-cpp-python==0.3.0 --prefer-binary
+                                                                                                                                                                                          
+                                                                                                                                                                                                - name: Build Executable
+                                                                                                                                                                                                        shell: cmd
+                                                                                                                                                                                                                run: |
+                                                                                                                                                                                                                          call venv\Scripts\activate
+                                                                                                                                                                                                                                    pyinstaller --noconfirm --onedir --windowed --name DocIntel --add-data "config.yaml;." --add-data "src;src" --add-data "assets;assets" --hidden-import llama_cpp --hidden-import llama_cpp.llama_chat_format --hidden-import pypdf --hidden-import docx --hidden-import rapidocr_onnxruntime --hidden-import gradio --hidden-import gradio.routes --hidden-import fastapi --hidden-import uvicorn --hidden-import pydantic --hidden-import pydantic_settings --hidden-import yaml launcher.py
+                                                                                                                                                                                                                                    
+                                                                                                                                                                                                                                          - name: Zip Output
+                                                                                                                                                                                                                                                  shell: powershell
+                                                                                                                                                                                                                                                          run: Compress-Archive -Path dist\DocIntel\* -DestinationPath DocIntel_Windows_x64.zip -Force
+                                                                                                                                                                                                                                                          
+                                                                                                                                                                                                                                                                - name: Upload Artifact
+                                                                                                                                                                                                                                                                        uses: actions/upload-artifact@v4
+                                                                                                                                                                                                                                                                                with:
+                                                                                                                                                                                                                                                                                          name: DocIntel_Windows_x64
+                                                                                                                                                                                                                                                                                                    path: DocIntel_Windows_x64.zip
+                                                                                                                                                                                                                                                                                                              retention-days: 7
